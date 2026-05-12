@@ -262,10 +262,21 @@ export function extractTimelineFromContent(content: string, slug: string): Extra
   const entries: ExtractedTimelineEntry[] = [];
 
   // Format 1: Bullet — - **YYYY-MM-DD** | Source — Summary
-  const bulletPattern = /^-\s+\*\*(\d{4}-\d{2}-\d{2})\*\*\s*\|\s*(.+?)\s*[—–-]\s*(.+)$/gm;
+  // Keep matches strictly single-line. `\s` includes newlines, which can make
+  // a plain `- **date** | summary` bullet consume the next timeline bullet and
+  // produce chopped/duplicated artifacts.
+  const bulletPattern = /^-\s+\*\*(\d{4}-\d{2}-\d{2})\*\*[^\S\r\n]*\|[^\S\r\n]*(.+?)[^\S\r\n]+[—–][^\S\r\n]+(.+)$/gm;
   let match;
   while ((match = bulletPattern.exec(content)) !== null) {
     entries.push({ slug, date: match[1], source: match[2].trim(), summary: match[3].trim() });
+  }
+
+  // Format 1b: Obsidian/project bullet — - **YYYY-MM-DD** | Summary
+  const simpleBulletPattern = /^-\s+\*\*(\d{4}-\d{2}-\d{2})\*\*[^\S\r\n]*\|[^\S\r\n]*(.+)$/gm;
+  while ((match = simpleBulletPattern.exec(content)) !== null) {
+    // Skip lines already handled by Format 1.
+    if (/^.+?[^\S\r\n]+[—–][^\S\r\n]+/.test(match[2])) continue;
+    entries.push({ slug, date: match[1], source: 'markdown', summary: match[2].trim() });
   }
 
   // Format 2: Header — ### YYYY-MM-DD — Title

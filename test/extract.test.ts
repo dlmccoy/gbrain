@@ -135,6 +135,43 @@ describe('extractTimelineFromContent', () => {
     const entries = extractTimelineFromContent(content, 'test');
     expect(entries).toHaveLength(1);
   });
+
+
+  it('extracts simple Obsidian timeline bullets without source', () => {
+    const content = `- **2026-04-28** | Finished construction of the bee stand.
+- **2026-04-27** | Marked out half laps.`;
+    const entries = extractTimelineFromContent(content, 'test');
+    expect(entries).toHaveLength(2);
+    expect(entries[0].source).toBe('markdown');
+    expect(entries[0].summary).toBe('Finished construction of the bee stand.');
+  });
+
+  it('does not consume the next bullet when a simple bullet precedes another date', () => {
+    const content = `- **2026-05-11** | Checked on the beehives; rain helped.
+- **2026-05-10** | Ordered beekeeping supplies from Mann Lake.`;
+    const entries = extractTimelineFromContent(content, 'test');
+    expect(entries).toHaveLength(2);
+    expect(entries[0].summary).not.toContain('2026-05-10');
+    expect(entries[1].summary).toBe('Ordered beekeeping supplies from Mann Lake.');
+  });
+
+
+  it('does not split simple summaries on hyphenated words', () => {
+    const content = `- **2026-04-28** | Set up the shower curtain as part of guest-readiness progress.`;
+    const entries = extractTimelineFromContent(content, 'test');
+    expect(entries).toHaveLength(1);
+    expect(entries[0].source).toBe('markdown');
+    expect(entries[0].summary).toBe('Set up the shower curtain as part of guest-readiness progress.');
+  });
+
+
+  it('does not split simple summaries on spaced hyphens inside wiki links', () => {
+    const content = `- **2026-04-16** | Project is paused until [[P2 - Projet Real Estate License]] is further along.`;
+    const entries = extractTimelineFromContent(content, 'test');
+    expect(entries).toHaveLength(1);
+    expect(entries[0].source).toBe('markdown');
+    expect(entries[0].summary).toContain('[[P2 - Projet Real Estate License]]');
+  });
 });
 
 describe('walkMarkdownFiles', () => {
